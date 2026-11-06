@@ -6,7 +6,7 @@ cd "$(dirname "$0")"
 VERSION=${1:-$(grep -oP '(?<=<AssemblyVersion>)[^<]+' Jellyfin.Plugin.DlHelper/Jellyfin.Plugin.DlHelper.csproj)}
 ABI=$(grep -oP '(?<=<JellyfinVersion>)[^<]+' Jellyfin.Plugin.DlHelper/Jellyfin.Plugin.DlHelper.csproj).0
 OUT="artifacts/dl-helper_${VERSION}"
-dotnet publish Jellyfin.Plugin.DlHelper -c Release -o artifacts/publish --nologo -v q \n  -p:AssemblyVersion="$VERSION" -p:FileVersion="$VERSION"
+dotnet publish Jellyfin.Plugin.DlHelper -c Release -o artifacts/publish --nologo -v q -p:AssemblyVersion="$VERSION" -p:FileVersion="$VERSION"
 rm -rf "$OUT" && mkdir -p "$OUT"
 cp artifacts/publish/Jellyfin.Plugin.DlHelper.dll "$OUT/"
 cat > "$OUT/meta.json" <<JSON
