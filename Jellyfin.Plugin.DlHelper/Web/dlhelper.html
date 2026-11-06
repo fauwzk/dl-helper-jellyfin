@@ -42,6 +42,11 @@
 .dlh-page details > summary::-webkit-details-marker { display: none; }
 .dlh-page .dlh-bar { height: 4px; background: rgba(128,128,128,.25); border-radius: 2px; overflow: hidden; margin-top: .6em; }
 .dlh-page .dlh-bar > div { height: 100%; background: #00a4dc; }
+.dlh-page .dlh-series { margin: -.2em 0 .8em; padding: .65em .85em; border-radius: .5em; background: rgba(0,164,220,.1); }
+.dlh-page .dlh-series.off { background: rgba(128,128,128,.08); opacity: .75; }
+.dlh-page .dlh-series label { display: flex; gap: .55em; align-items: flex-start; cursor: pointer; }
+.dlh-page .dlh-series input { margin-top: .25em; accent-color: #00a4dc; }
+.dlh-page .dlh-series .dlh-note { margin: .3em 0 0 1.75em; }
 </style>
 
 <div data-role="content">
@@ -50,6 +55,7 @@
   <div class="dlh-head">
     <h2>📥 Téléchargements</h2>
     <button is="emby-button" type="button" class="raised button-alt dlh-scan" title="Vérifier le dossier tout de suite"><span>🔄 Actualiser</span></button>
+    <button is="emby-button" type="button" class="raised button-alt dlh-libscan" title="Analyser toutes les médiathèques Jellyfin"><span>📚 Médiathèques</span></button>
     <a is="emby-linkbutton" class="raised button-alt" href="#/configurationpage?name=dlhelperconfig" title="Réglages"><span>⚙️</span></a>
   </div>
   <div class="dlh-chips"></div>
@@ -165,6 +171,8 @@
             (badDest.length ? badDest.map(function (d) { return '❌ ' + esc(d.label); }).join(', ') : '✅') + '</span>');
         c.push('<span class="dlh-chip">Mode auto : ' + (s.autoAction === 'copy' || s.autoAction === 'move'
             ? (s.autoAction === 'copy' ? 'copier' : 'déplacer') + ' après ' + s.autoDelayMinutes + ' min' : 'désactivé') + '</span>');
+        c.push('<span class="dlh-chip" title="Après un rangement">Médiathèque : ' +
+            ({ folder: 'actualisée (dossier rangé)', all: 'actualisée (tout)', none: 'analyse planifiée' }[s.libraryRefresh] || '—') + '</span>');
         c.push('<span class="dlh-chip">Dernier scan : ' + ago(s.lastScan) + '</span>');
         $('.dlh-chips').innerHTML = c.join('');
     }
@@ -177,6 +185,43 @@
                 '<button class="dlh-link" data-mute="' + esc(p.key) + '" data-on="' + (p.muted ? '0' : '1') + '">' +
                 (p.muted ? '🔔 Réactiver' : '🔕 Ignorer') + '</button></div>';
         }).join('');
+    }
+
+    /** [1,2,3,5] → « E01–E03, E05 » */
+    function episodes(list) {
+        if (!list || !list.length) return '';
+        var pad = function (n) { return 'E' + (n < 10 ? '0' : '') + n; };
+        var out = [], start = list[0], prev = list[0];
+        for (var i = 1; i <= list.length; i++) {
+            var n = list[i];
+            if (n === prev + 1) { prev = n; continue; }
+            out.push(start === prev ? pad(start) : pad(start) + '–' + pad(prev));
+            start = prev = n;
+        }
+        return out.join(', ');
+    }
+
+    /** Séries / Anime : « Ajouter à The Office › Season.03 », avec une case pour ranger tel quel à la place. */
+    function seriesBlock(it, dest) {
+        var p = it.series && it.series[dest];
+        if (!p) return '';
+        var where = '<b>' + esc(p.show) + '</b>' + (p.seasonFolder ? ' › <b>' + esc(p.seasonFolder) + '</b>' : '');
+        var what;
+        if (!p.showExists) what = '🆕 Nouvelle série' + (p.seasonFolder ? ', rangée dans un dossier de saison' : '');
+        else if (p.seasonFolder && !p.seasonExists) what = '🆕 Nouvelle saison dans la série existante';
+        else what = 'Dossier existant' + (p.existingVideos ? ' · ' + p.existingVideos + ' épisode(s) déjà là' : '');
+        var eps = episodes(p.episodes);
+        var notes = [what];
+        if (eps) notes.push('Ce téléchargement : ' + eps);
+        var h = '<div class="dlh-series' + (it.useSeries ? '' : ' off') + '"><label>' +
+            '<input type="checkbox" data-series' + (it.useSeries ? ' checked' : '') + '>' +
+            '<span>' + (dest === 'ANIME' ? '🎌' : '📺') + ' Ajouter à ' + where + '</span></label>' +
+            '<div class="dlh-note">' + esc(notes.join(' · ')) + '</div>';
+        if (p.alreadyThere && p.alreadyThere.length && it.useSeries) {
+            h += '<div class="dlh-note" style="color:#ffa726">⚠️ ' + episodes(p.alreadyThere) + ' déjà présent(s) : la nouvelle version sera ajoutée à côté, avec « (2) » si le nom est identique.</div>';
+        }
+        if (!it.useSeries) h += '<div class="dlh-note">Sera rangé tel quel à la racine de ' + esc(LABEL[dest]) + '.</div>';
+        return h + '</div>';
     }
 
     function pendingCard(it, s) {
@@ -192,6 +237,8 @@
             return '<button type="button" class="dlh-dest' + (d.key === dest ? ' on' : '') + '" data-dest="' + d.key + '" title="' + esc(d.path) + '">' +
                 d.emoji + ' ' + esc(d.label) + (d.key === it.suggest && !it.dest ? '<small>suggéré</small>' : '') + '</button>';
         }).join('') + '</div>';
+
+        h += seriesBlock(it, dest);
 
         var dis = (!dest || busy) ? ' disabled' : '';
         h += '<div class="dlh-actions">' +
@@ -303,6 +350,11 @@
             api('POST', 'Scan').then(function () { toast('🔄 Vérification lancée'); setTimeout(refresh, 1500); });
             return;
         }
+        if (t.classList.contains('dlh-libscan')) {
+            api('POST', 'Library/Refresh').then(function () { toast('📚 Analyse des médiathèques lancée'); })
+                .catch(function (e) { toast('❌ ' + e.message); });
+            return;
+        }
         if (t.classList.contains('dlh-clear')) {
             api('DELETE', 'History').then(function () { refresh(true); });
             return;
@@ -368,6 +420,14 @@
             refresh(true);
         }).catch(function (e) { toast('❌ ' + e.message); });
     }
+
+    page.addEventListener('change', function (ev) {
+        if (!ev.target.hasAttribute || !ev.target.hasAttribute('data-series')) return;
+        var card = ev.target.closest('.dlh-card');
+        var id = card.dataset.id, it = itemById(id), on = ev.target.checked;
+        if (it) { it.useSeries = on; render(last); }
+        api('POST', 'Items/' + id + '/Select', { UseSeries: on }).catch(function (e) { toast('❌ ' + e.message); refresh(true); });
+    });
 
     page.addEventListener('keydown', function (ev) {
         if (!ev.target.classList || !ev.target.classList.contains('dlh-rename-input')) return;

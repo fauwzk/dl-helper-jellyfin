@@ -40,9 +40,13 @@
     <label><input is="emby-checkbox" type="checkbox" id="UseHardlinks" /><span>Copier avec des hardlinks</span></label>
     <div class="fieldDescription checkboxFieldDescription">Copie instantanée qui ne prend pas de place quand la source et la destination sont sur le même disque.</div>
   </div>
-  <div class="checkboxContainer checkboxContainer-withDescription">
-    <label><input is="emby-checkbox" type="checkbox" id="RefreshLibraryAfterTransfer" /><span>Analyser les médiathèques après un rangement</span></label>
-    <div class="fieldDescription checkboxFieldDescription">Le nouveau film, épisode ou album apparaît dans Jellyfin sans attendre l'analyse planifiée.</div>
+  <div class="selectContainer">
+    <select is="emby-select" id="LibraryRefresh" label="Actualiser la médiathèque après un rangement">
+      <option value="folder">Oui, seulement le dossier rangé (rapide)</option>
+      <option value="all">Oui, toutes les médiathèques</option>
+      <option value="none">Non, attendre l'analyse planifiée</option>
+    </select>
+    <div class="fieldDescription">Le nouveau film, épisode ou album apparaît dans Jellyfin tout de suite.</div>
   </div>
   <div class="selectContainer">
     <select is="emby-select" id="AutoAction" label="Action automatique">
@@ -115,9 +119,9 @@
     var pluginId = '252483f4-bd35-44be-ba5e-49e971a89efe';
     var page = document.querySelector('#dlHelperConfigPage');
     var TEXT = ['WatchDir', 'DestAnime', 'DestMusique', 'DestFilms', 'DestSeries', 'SyncthingUrl', 'SyncthingConfig',
-        'SyncthingApiKey', 'SyncthingFolderId', 'JellyfinPublicUrl', 'NtfyServer', 'NtfyTopic', 'NtfyToken', 'DiscordWebhookUrl', 'AutoAction'];
+        'SyncthingApiKey', 'SyncthingFolderId', 'JellyfinPublicUrl', 'NtfyServer', 'NtfyTopic', 'NtfyToken', 'DiscordWebhookUrl', 'AutoAction', 'LibraryRefresh'];
     var NUM = ['PollInterval', 'StableSeconds', 'AutoDelayMinutes'];
-    var BOOL = ['UseHardlinks', 'RefreshLibraryAfterTransfer', 'NotifyPopup', 'NotifyActivityLog'];
+    var BOOL = ['UseHardlinks', 'NotifyPopup', 'NotifyActivityLog'];
 
     function el(id) { return page.querySelector('#' + id); }
     function esc(s) {

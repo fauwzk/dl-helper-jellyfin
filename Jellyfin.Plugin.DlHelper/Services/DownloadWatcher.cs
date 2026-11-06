@@ -25,6 +25,7 @@ public sealed class DownloadWatcher : BackgroundService
 
     private readonly ILogger<DownloadWatcher> _log;
     private readonly ILibraryManager _libraryManager;
+    private readonly ILibraryMonitor _libraryMonitor;
     private readonly Notifier _notifier;
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly Dictionary<string, Problem> _problems = new();
@@ -38,10 +39,11 @@ public sealed class DownloadWatcher : BackgroundService
     private SyncthingStatus? _lastStatus;
     private bool _transferRunning;
 
-    public DownloadWatcher(ILogger<DownloadWatcher> log, ILibraryManager libraryManager, Notifier notifier)
+    public DownloadWatcher(ILogger<DownloadWatcher> log, ILibraryManager libraryManager, ILibraryMonitor libraryMonitor, Notifier notifier)
     {
         _log = log;
         _libraryManager = libraryManager;
+        _libraryMonitor = libraryMonitor;
         _notifier = notifier;
     }
 
@@ -210,6 +212,7 @@ public sealed class DownloadWatcher : BackgroundService
                 {
                     it.Suggest = FileOps.SuggestDest(path);
                     it.IsDir = Directory.Exists(path);
+                    AnalyzeSeries(c, name, it);
                     it.Status = ItemStatus.Pending;
                     it.NotifiedAt = now;
                     _log.LogInformation("dl-helper : à ranger {Name} (suggestion {Suggest})", name, it.Suggest ?? "aucune");
@@ -402,7 +405,7 @@ public sealed class DownloadWatcher : BackgroundService
 
     // ================================================================ actions
 
-    public async Task<TrackedItem> SelectAsync(string id, string? dest, string? rename, CancellationToken ct)
+    public async Task<TrackedItem> SelectAsync(string id, string? dest, string? rename, bool? useSeries, CancellationToken ct)
     {
         await _lock.WaitAsync(ct).ConfigureAwait(false);
         try
@@ -429,6 +432,12 @@ public sealed class DownloadWatcher : BackgroundService
                 it.Rename = clean == name ? null : clean;
             }
 
+            if (useSeries is not null)
+            {
+                it.UseSeries = useSeries.Value;
+            }
+
+            AnalyzeSeries(Config, name, it); // le dossier de la série a pu changer depuis
             State.Save();
             return it;
         }
@@ -462,6 +471,7 @@ public sealed class DownloadWatcher : BackgroundService
             it.Count = fp.Count;
             it.IsDir = Directory.Exists(path);
             it.Suggest = FileOps.SuggestDest(path);
+            AnalyzeSeries(c, name, it);
             it.Status = ItemStatus.Pending;
             it.NotifiedAt = DateTime.UtcNow;
             it.LastError = null;
@@ -559,8 +569,16 @@ public sealed class DownloadWatcher : BackgroundService
         try
         {
             var destDir = DestPath(c, dest)!;
+            var src = Path.Combine(c.WatchDir, name);
             target = await Task.Run(
-                () => FileOps.Transfer(Path.Combine(c.WatchDir, name), destDir, action, it.Rename, c.UseHardlinks),
+                () =>
+                {
+                    // Série : on revérifie au dernier moment (la saison a pu être créée entre-temps).
+                    var placement = it.UseSeries && dest is "SERIES" or "ANIME" ? SeriesMatcher.Analyze(src, destDir) : null;
+                    return placement is null
+                        ? FileOps.Transfer(src, destDir, action, it.Rename, c.UseHardlinks)
+                        : FileOps.TransferInto(src, Path.Combine(destDir, placement.RelativeTarget), action, it.Rename, c.UseHardlinks);
+                },
                 ct).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -609,18 +627,57 @@ public sealed class DownloadWatcher : BackgroundService
             _lock.Release();
         }
 
-        if (error is null && c.RefreshLibraryAfterTransfer)
+        if (error is null && target is not null)
+        {
+            RefreshLibrary(c, target);
+        }
+    }
+
+    /// <summary>Calcule où irait l'élément s'il est rangé en Séries ou en Anime (dossier de la série + saison).</summary>
+    private void AnalyzeSeries(PluginConfiguration c, string name, TrackedItem it)
+    {
+        var src = Path.Combine(c.WatchDir, name);
+        it.Series = new Dictionary<string, SeriesPlacement>();
+        foreach (var key in new[] { "SERIES", "ANIME" })
         {
             try
             {
-                _libraryManager.QueueLibraryScan();
+                if (SeriesMatcher.Analyze(src, DestPath(c, key)!) is { } p)
+                {
+                    it.Series[key] = p;
+                }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                _log.LogWarning(ex, "dl-helper : impossible de lancer l'analyse des médiathèques");
+                _log.LogDebug(ex, "dl-helper : analyse de série impossible pour {Name}", name);
             }
         }
     }
+
+    /// <summary>Fait apparaître le nouvel élément dans Jellyfin, selon le réglage LibraryRefresh.</summary>
+    private void RefreshLibrary(PluginConfiguration c, string target)
+    {
+        try
+        {
+            switch (c.LibraryRefresh)
+            {
+                case "folder":
+                    // Comme la surveillance en temps réel : Jellyfin n'analyse que le dossier concerné.
+                    _libraryMonitor.ReportFileSystemChanged(target);
+                    break;
+                case "all":
+                    _libraryManager.QueueLibraryScan();
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "dl-helper : impossible d'actualiser la médiathèque");
+        }
+    }
+
+    /// <summary>Lance tout de suite l'analyse de toutes les médiathèques (bouton de la page).</summary>
+    public void RefreshAllLibraries() => _libraryManager.QueueLibraryScan();
 
     public async Task SetMutedAsync(string key, bool mute, CancellationToken ct)
     {
@@ -673,6 +730,10 @@ public sealed class DownloadWatcher : BackgroundService
         {
             var st = State.Data;
             var recv = ReceivingSummary();
+            foreach (var (name, it) in st.Items.Where(kv => kv.Value.Status == ItemStatus.Pending && kv.Value.Series is null).ToList())
+            {
+                AnalyzeSeries(c, name, it); // éléments en attente d'avant cette version
+            }
             var problems = _problems.Values
                 .Select(p => new ProblemDto(p.Key, p.Message, st.Muted.TryGetValue(p.Key, out var sig) && sig == p.Signature, p.Since))
                 .OrderBy(p => p.Muted)
@@ -691,6 +752,7 @@ public sealed class DownloadWatcher : BackgroundService
                 SyncthingNeedBytes = _lastStatus?.NeedBytes ?? 0,
                 AutoAction = c.AutoAction,
                 AutoDelayMinutes = c.AutoDelayMinutes,
+                LibraryRefresh = c.LibraryRefresh,
                 TransferRunning = _transferRunning,
                 Problems = problems,
                 Destinations = DestKeys.Select(k => new DestinationDto(
@@ -735,6 +797,7 @@ public sealed class DownloadWatcher : BackgroundService
             Suggest = it.Suggest, Dest = it.Dest, ChosenDest = it.ChosenDest, Rename = it.Rename,
             LastError = it.LastError, Target = it.Target, NotifiedAt = it.NotifiedAt, FirstSeen = it.FirstSeen,
             StableSince = it.StableSince, AutoActionAt = autoAt, ReceivingFiles = r.Files, ReceivingBytes = r.Bytes,
+            Series = it.Series, UseSeries = it.UseSeries,
         };
     }
 
@@ -813,6 +876,10 @@ public class ItemDto
     public int ReceivingFiles { get; set; }
 
     public long ReceivingBytes { get; set; }
+
+    public Dictionary<string, SeriesPlacement>? Series { get; set; }
+
+    public bool UseSeries { get; set; }
 }
 
 public class StatusSnapshot
@@ -840,6 +907,8 @@ public class StatusSnapshot
     public string AutoAction { get; set; } = "none";
 
     public double AutoDelayMinutes { get; set; }
+
+    public string LibraryRefresh { get; set; } = "folder";
 
     public bool TransferRunning { get; set; }
 

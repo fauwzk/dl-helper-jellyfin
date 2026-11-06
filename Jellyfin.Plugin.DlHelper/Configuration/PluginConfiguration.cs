@@ -39,8 +39,11 @@ public class PluginConfiguration : BasePluginConfiguration
 
     public double AutoDelayMinutes { get; set; } = 60;
 
-    /// <summary>Lance une analyse des médiathèques Jellyfin après chaque rangement réussi.</summary>
-    public bool RefreshLibraryAfterTransfer { get; set; } = true;
+    /// <summary>
+    /// Après un rangement : folder = Jellyfin analyse seulement le dossier ajouté (rapide) ;
+    /// all = analyse de toutes les médiathèques ; none = attendre l'analyse planifiée.
+    /// </summary>
+    public string LibraryRefresh { get; set; } = "folder";
 
     // --- Notifications ---
 

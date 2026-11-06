@@ -49,6 +49,12 @@ public class TrackedItem
 
     public string? Target { get; set; }
 
+    /// <summary>Séries / Anime : où l'élément irait (dossier de la série + saison), par destination.</summary>
+    public Dictionary<string, SeriesPlacement>? Series { get; set; }
+
+    /// <summary>Ranger dans le dossier de la série (sinon : tel quel à la racine de la destination).</summary>
+    public bool UseSeries { get; set; } = true;
+
     public string? ChosenDest => string.IsNullOrEmpty(Dest) ? Suggest : Dest;
 }
 

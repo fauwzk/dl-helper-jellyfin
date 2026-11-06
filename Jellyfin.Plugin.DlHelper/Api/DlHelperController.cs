@@ -57,7 +57,7 @@ public class DlHelperController : ControllerBase
     /// <summary>Choisit la destination et/ou le nouveau nom d'un élément (chaîne vide = réinitialiser).</summary>
     [HttpPost("Items/{id}/Select")]
     public Task<IActionResult> Select([FromRoute] string id, [FromBody] SelectRequest body, CancellationToken ct) =>
-        Run(async () => (object?)await _watcher.SelectAsync(id, body.Destination, body.Rename, ct).ConfigureAwait(false));
+        Run(async () => (object?)await _watcher.SelectAsync(id, body.Destination, body.Rename, body.UseSeries, ct).ConfigureAwait(false));
 
     /// <summary>copy | move | ignore.</summary>
     [HttpPost("Items/{id}/Action")]
@@ -81,6 +81,14 @@ public class DlHelperController : ControllerBase
     public IActionResult Scan()
     {
         _watcher.WakeUp();
+        return NoContent();
+    }
+
+    /// <summary>Analyse toutes les médiathèques maintenant.</summary>
+    [HttpPost("Library/Refresh")]
+    public IActionResult RefreshLibrary()
+    {
+        _watcher.RefreshAllLibraries();
         return NoContent();
     }
 
@@ -157,6 +165,8 @@ public class SelectRequest
     public string? Destination { get; set; }
 
     public string? Rename { get; set; }
+
+    public bool? UseSeries { get; set; }
 }
 
 public class ActionRequest

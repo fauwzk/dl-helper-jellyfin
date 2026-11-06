@@ -25,7 +25,8 @@ Accès : menu latéral → **Téléchargements** (administrateurs uniquement).
 | Où on range | boutons Discord | page **Téléchargements** dans Jellyfin |
 | Détection, suggestion, hardlinks, renommage, mode auto, erreurs ignorées 🔕 | ✅ | ✅ (même logique) |
 | Réglages | `/config` | Tableau de bord → Extensions → **dl-helper** |
-| Après un rangement | — | **analyse des médiathèques** lancée tout de suite |
+| Séries et animes | rangés tels quels | **ajoutés dans le dossier de la série**, dans la bonne saison |
+| Après un rangement | — | **médiathèque actualisée** tout de suite (dossier rangé ou tout) |
 | Notifications | messages dans le salon | message à l'écran dans Jellyfin, **ntfy** (push téléphone), webhook Discord, journal d'activité |
 | Mises à jour | automatiques depuis GitHub | catalogue d'extensions de Jellyfin |
 
@@ -94,6 +95,13 @@ Si Jellyfin change de version majeure, adapte `<JellyfinVersion>` (et au besoin 
 - **Suggestion** : surtout de l'audio → Musique ; `[Groupe] Titre - 12` → Anime ; `S01E02`, `Saison`, `Intégrale` ou 3 vidéos et plus → Séries ; sinon une vidéo → Films ; ni vidéo ni audio → pas de suggestion.
 - **Copier** fait des hardlinks quand c'est possible (même système de fichiers et même montage), sinon une vraie copie. **Déplacer** renomme, ou copie puis supprime si les dossiers sont sur des disques différents.
 - **Doublons** : si le nom existe déjà dans la destination, ` (2)`, ` (3)`… est ajouté.
+- **Séries et animes** : en Séries ou en Anime, le plugin reconnaît `Titre S03`, `Titre S03E05`, `Titre Saison 3`, `Titre 3x05` ou `[Groupe] Titre - 12`. Il cherche ensuite le dossier de la série dans la destination, même si le nom diffère un peu (année, « US », accents, apostrophes), puis propose **Ajouter à Série › Saison** :
+  - si la saison existe déjà, les épisodes y sont ajoutés, et ceux déjà présents sont signalés ;
+  - sinon, une saison est créée sur le modèle des autres (`S03`, `Season.03`, `Saison 3`…) ;
+  - si la série n'existe pas encore, elle est créée avec `Titre/Season 03`.
+
+  Une case permet de ranger l'élément tel quel à la place. Un épisode d'anime sans saison va dans la dernière saison de la série.
+- **Médiathèque** : après un rangement, Jellyfin analyse seulement le dossier ajouté (réglage *Actualiser la médiathèque*). Tu peux choisir d'analyser toutes les médiathèques, ou de ne rien faire. Le bouton **📚 Médiathèques** lance une analyse complète à la main.
 - **État** : `state.json` dans le dossier de données du plugin (`/config/data/plugins/configurations/…` ou à côté du `.dll`, selon Jellyfin). Il survit aux redémarrages.
 - **Syncthing en réception seule** : un élément déplacé apparaît dans « Modifications locales ». **Ne clique pas sur « Revert Local Changes »**, sinon Syncthing re-télécharge tout.
 
@@ -105,7 +113,8 @@ Toutes les routes demandent un compte administrateur (`/DlHelper/...`) :
 |---|---|---|
 | GET | `Status` | santé, éléments suivis, réception Syncthing, historique |
 | GET | `Folder` | contenu complet du dossier surveillé (avec tailles) |
-| POST | `Items/{id}/Select` | `{Destination, Rename}` |
+| POST | `Items/{id}/Select` | `{Destination, Rename, UseSeries}` |
+| POST | `Library/Refresh` | analyser toutes les médiathèques |
 | POST | `Items/{id}/Action` | `{Action: copy\|move\|ignore, Destination?}` |
 | POST | `Items/{id}/Restore` | remettre un élément dans « À ranger » |
 | POST | `Scan` | vérifier tout de suite |

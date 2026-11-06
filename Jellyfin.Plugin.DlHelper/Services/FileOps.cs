@@ -230,6 +230,63 @@ public static partial class FileOps
         return target;
     }
 
+    /// <summary>
+    /// Range src DANS targetDir (dossier de saison d'une série) : un fichier y est placé (renommé si demandé),
+    /// le contenu d'un dossier y est fusionné. Les noms déjà pris reçoivent « (2) ». Renvoie targetDir.
+    /// </summary>
+    public static string TransferInto(string src, string targetDir, string action, string? newName, bool useHardlinks)
+    {
+        var isFile = File.Exists(src);
+        if (!isFile && !Directory.Exists(src))
+        {
+            throw new FileNotFoundException("élément introuvable dans le dossier surveillé", src);
+        }
+
+        Directory.CreateDirectory(targetDir);
+
+        // Saison absente : le dossier entier devient le dossier de saison (rapide, et un simple renommage pour « Déplacer »).
+        if (!isFile && !Directory.EnumerateFileSystemEntries(targetDir).Any())
+        {
+            Directory.Delete(targetDir);
+            if (action == "move")
+            {
+                Move(src, targetDir, isFile: false, useHardlinks);
+            }
+            else
+            {
+                CopyTree(src, targetDir, useHardlinks);
+            }
+
+            return targetDir;
+        }
+
+        var files = isFile
+            ? new[] { (Src: src, Rel: newName ?? Path.GetFileName(src)) }
+            : Directory.EnumerateFiles(src, "*", SearchOption.AllDirectories).Select(f => (Src: f, Rel: Path.GetRelativePath(src, f))).ToArray();
+
+        foreach (var (file, rel) in files)
+        {
+            var dir = Path.GetDirectoryName(Path.Combine(targetDir, rel))!;
+            Directory.CreateDirectory(dir);
+            var dst = UniqueTarget(dir, Path.GetFileName(rel), isFile: true);
+            if (action == "move")
+            {
+                Move(file, dst, isFile: true, useHardlinks);
+            }
+            else
+            {
+                LinkOrCopy(file, dst, useHardlinks);
+            }
+        }
+
+        if (action == "move" && !isFile)
+        {
+            Directory.Delete(src, recursive: true); // ne reste que des dossiers vides
+        }
+
+        return targetDir;
+    }
+
     private static void Move(string src, string target, bool isFile, bool useHardlinks)
     {
         try
