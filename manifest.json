@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "1.1.0.0",
+        "changelog": "Séries : ajout dans la bonne saison ; actualisation ciblée de la médiathèque",
+        "targetAbi": "12.4.0.0",
+        "sourceUrl": "https://github.com/fauwzk/dl-helper-jellyfin/releases/download/v1.1.0.0/dl-helper_1.1.0.0.zip",
+        "checksum": "db3375b507071002ad5397cb92600042",
+        "timestamp": "2026-11-06T15:49:20Z"
+      },
+      {
         "version": "1.0.1.0",
         "changelog": "Message clair quand Syncthing n'est pas encore configuré",
         "targetAbi": "12.4.0.0",
