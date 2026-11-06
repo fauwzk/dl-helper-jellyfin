@@ -8,6 +8,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "1.0.1.0",
+        "changelog": "Message clair quand Syncthing n'est pas encore configuré",
+        "targetAbi": "12.4.0.0",
+        "sourceUrl": "https://github.com/fauwzk/dl-helper-jellyfin/releases/download/v1.0.1.0/dl-helper_1.0.1.0.zip",
+        "checksum": "095b8bc1a4082349a689e964a933a4a4",
+        "timestamp": "2026-11-06T15:33:02Z"
+      },
+      {
         "version": "1.0.0.0",
         "changelog": "Première version",
         "targetAbi": "12.4.0.0",
