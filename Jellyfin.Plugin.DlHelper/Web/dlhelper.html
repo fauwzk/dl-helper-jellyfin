@@ -156,6 +156,7 @@
     function chips(s) {
         var c = [];
         if (!s.syncthingEnabled) c.push('<span class="dlh-chip">Syncthing : non configuré</span>');
+        else if (s.syncthingNeedsSetup) c.push('<a class="dlh-chip bad" href="#/configurationpage?name=dlhelperconfig">Syncthing : à configurer ⚙️</a>');
         else if (!s.syncthingOk) c.push('<span class="dlh-chip bad">Syncthing : injoignable</span>');
         else c.push('<span class="dlh-chip">Syncthing : ' + esc(s.syncthingState) +
             (s.syncthingNeedFiles ? ' · ' + s.syncthingNeedFiles + ' fichier(s) à recevoir (' + size(s.syncthingNeedBytes) + ')' : '') + '</span>');

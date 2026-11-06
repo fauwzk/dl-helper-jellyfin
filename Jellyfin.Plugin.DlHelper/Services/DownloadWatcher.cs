@@ -49,6 +49,9 @@ public sealed class DownloadWatcher : BackgroundService
 
     public DateTime? LastScan { get; private set; }
 
+    /// <summary>Syncthing activé mais clé API / ID de dossier manquant ou config.xml illisible.</summary>
+    public bool SyncthingNeedsSetup { get; private set; }
+
     private static PluginConfiguration Config => Plugin.Instance!.Configuration;
 
     private StateStore State => _state ??= new StateStore(Path.Combine(Plugin.Instance!.DataFolderPath, "state.json"));
@@ -308,8 +311,27 @@ public sealed class DownloadWatcher : BackgroundService
         {
             if (_syncthingDirty || _syncthing is null)
             {
+                _syncthing = null;
+                try
+                {
+                    _syncthing = SyncthingClient.Create(c.SyncthingUrl, c.SyncthingApiKey.Trim(), c.SyncthingFolderId.Trim(), c.SyncthingConfig.Trim(), c.WatchDir);
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or IOException or UnauthorizedAccessException or System.Xml.XmlException)
+                {
+                    // Réglage manquant ou config.xml illisible : pas une panne de Syncthing.
+                    _lastNeeded = null;
+                    _lastStatus = null;
+                    SyncthingNeedsSetup = true;
+                    var why = ex is InvalidOperationException
+                        ? "clé API ou ID du dossier à renseigner"
+                        : $"config.xml illisible depuis Jellyfin ({ex.Message})";
+                    Report("Syncthing", $"Syncthing à configurer : {why}. Réglages du plugin → Syncthing (bouton « Trouver le dossier »). "
+                        + "En attendant, détection par stabilité des fichiers uniquement.");
+                    return;
+                }
+
                 _syncthingDirty = false;
-                _syncthing = SyncthingClient.Create(c.SyncthingUrl, c.SyncthingApiKey.Trim(), c.SyncthingFolderId.Trim(), c.SyncthingConfig.Trim(), c.WatchDir);
+                SyncthingNeedsSetup = false;
                 _log.LogInformation("dl-helper : dossier Syncthing {Id} surveillé via l'API", _syncthing.FolderId);
             }
 
@@ -336,7 +358,11 @@ public sealed class DownloadWatcher : BackgroundService
             _lastNeeded = null;
             _lastStatus = null;
             _syncthingDirty = true;
-            Report("Syncthing", $"API injoignable : {ex.Message}. Détection par stabilité des fichiers uniquement.");
+            var detail = ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.Forbidden or System.Net.HttpStatusCode.Unauthorized }
+                         || ex.Message.Contains("HTTP 403", StringComparison.Ordinal) || ex.Message.Contains("HTTP 401", StringComparison.Ordinal)
+                ? "clé API refusée par Syncthing (vérifie-la dans les réglages)"
+                : $"API injoignable : {ex.Message}";
+            Report("Syncthing", $"{detail}. Détection par stabilité des fichiers uniquement.");
         }
     }
 
@@ -659,6 +685,7 @@ public sealed class DownloadWatcher : BackgroundService
                 Version = Plugin.Instance!.Version.ToString(),
                 SyncthingEnabled = !string.IsNullOrWhiteSpace(c.SyncthingUrl),
                 SyncthingOk = _lastStatus is not null,
+                SyncthingNeedsSetup = SyncthingNeedsSetup,
                 SyncthingState = _lastStatus?.State,
                 SyncthingNeedFiles = _lastStatus?.NeedFiles ?? 0,
                 SyncthingNeedBytes = _lastStatus?.NeedBytes ?? 0,
@@ -801,6 +828,8 @@ public class StatusSnapshot
     public bool SyncthingEnabled { get; set; }
 
     public bool SyncthingOk { get; set; }
+
+    public bool SyncthingNeedsSetup { get; set; }
 
     public string? SyncthingState { get; set; }
 
