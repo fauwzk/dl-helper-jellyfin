@@ -1,0 +1,214 @@
+<div id="dlHelperConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+<style>
+#dlHelperConfigPage .dlh-folders { margin: .5em 0 1em; }
+#dlHelperConfigPage .dlh-folders button { display: block; width: 100%; text-align: left; background: rgba(128,128,128,.12); border: 0; color: inherit; font: inherit; padding: .6em .9em; border-radius: .4em; margin-bottom: .4em; cursor: pointer; }
+#dlHelperConfigPage .dlh-folders button:hover { background: rgba(0,164,220,.25); }
+#dlHelperConfigPage .dlh-folders small { opacity: .7; display: block; }
+#dlHelperConfigPage .dlh-msg { margin: .5em 0 1em; font-size: .9em; }
+#dlHelperConfigPage .dlh-msg.err { color: #ef5350; }
+#dlHelperConfigPage .dlh-msg.ok { color: #66bb6a; }
+#dlHelperConfigPage h2.sectionTitle { margin-top: 1.6em; }
+</style>
+<div data-role="content">
+<div class="content-primary">
+<form class="dlHelperConfigForm">
+
+  <div class="verticalSection">
+    <div class="sectionTitleContainer flex align-items-center">
+      <h2 class="sectionTitle">dl-helper</h2>
+      <a is="emby-linkbutton" class="raised button-alt" style="margin-left:1em" href="#/configurationpage?name=dlhelper"><span>📥 Ouvrir les téléchargements</span></a>
+    </div>
+    <p class="fieldDescription">Les chemins sont ceux vus par Jellyfin. En Docker, c'est le chemin <b>dans le conteneur</b> (sur moon, <code>/ranger</code> est monté sur <code>/space</code>). Pour que « Copier » utilise des hardlinks, le dossier surveillé et les destinations doivent être dans le <b>même montage</b>.</p>
+  </div>
+
+  <h2 class="sectionTitle">🗂️ Dossiers</h2>
+  <div class="inputContainer">
+    <input is="emby-input" type="text" id="WatchDir" label="Dossier surveillé" required />
+    <div class="fieldDescription">Dossier rempli par Syncthing. Au premier lancement, ce qui s'y trouve déjà est ignoré.</div>
+  </div>
+  <div class="inputContainer"><input is="emby-input" type="text" id="DestAnime" label="🎌 Destination Anime" list="dlhLibPaths" /></div>
+  <div class="inputContainer"><input is="emby-input" type="text" id="DestMusique" label="🎵 Destination Musique" list="dlhLibPaths" /></div>
+  <div class="inputContainer"><input is="emby-input" type="text" id="DestFilms" label="🎬 Destination Films" list="dlhLibPaths" /></div>
+  <div class="inputContainer">
+    <input is="emby-input" type="text" id="DestSeries" label="📺 Destination Séries" list="dlhLibPaths" />
+    <div class="fieldDescription">Les dossiers de tes médiathèques Jellyfin sont proposés automatiquement.</div>
+  </div>
+  <datalist id="dlhLibPaths"></datalist>
+
+  <h2 class="sectionTitle">⚙️ Rangement</h2>
+  <div class="checkboxContainer checkboxContainer-withDescription">
+    <label><input is="emby-checkbox" type="checkbox" id="UseHardlinks" /><span>Copier avec des hardlinks</span></label>
+    <div class="fieldDescription checkboxFieldDescription">Copie instantanée qui ne prend pas de place quand la source et la destination sont sur le même disque.</div>
+  </div>
+  <div class="checkboxContainer checkboxContainer-withDescription">
+    <label><input is="emby-checkbox" type="checkbox" id="RefreshLibraryAfterTransfer" /><span>Analyser les médiathèques après un rangement</span></label>
+    <div class="fieldDescription checkboxFieldDescription">Le nouveau film, épisode ou album apparaît dans Jellyfin sans attendre l'analyse planifiée.</div>
+  </div>
+  <div class="selectContainer">
+    <select is="emby-select" id="AutoAction" label="Action automatique">
+      <option value="none">Désactivée (attendre un clic)</option>
+      <option value="copy">Copier vers la destination suggérée</option>
+      <option value="move">Déplacer vers la destination suggérée</option>
+    </select>
+    <div class="fieldDescription">Appliquée si personne n'a choisi au bout du délai. Les éléments sans suggestion ne sont jamais traités automatiquement.</div>
+  </div>
+  <div class="inputContainer"><input is="emby-input" type="number" id="AutoDelayMinutes" label="Délai avant l'action automatique (minutes)" min="1" step="1" /></div>
+
+  <h2 class="sectionTitle">🔔 Notifications</h2>
+  <div class="checkboxContainer checkboxContainer-withDescription">
+    <label><input is="emby-checkbox" type="checkbox" id="NotifyPopup" /><span>Message à l'écran dans Jellyfin</span></label>
+    <div class="fieldDescription checkboxFieldDescription">Pour les administrateurs connectés (navigateur, appli ouverte).</div>
+  </div>
+  <div class="checkboxContainer checkboxContainer-withDescription">
+    <label><input is="emby-checkbox" type="checkbox" id="NotifyActivityLog" /><span>Journal d'activité</span></label>
+    <div class="fieldDescription checkboxFieldDescription">Rangements et problèmes visibles dans Tableau de bord → Activité.</div>
+  </div>
+  <div class="inputContainer">
+    <input is="emby-input" type="url" id="JellyfinPublicUrl" label="Adresse de Jellyfin (pour les liens)" placeholder="https://jellyfin.exemple.fr" />
+    <div class="fieldDescription">Toucher une notification ouvre directement la page Téléchargements.</div>
+  </div>
+
+  <p><b>📱 Sur le téléphone avec ntfy</b> : installe l'appli <a href="https://ntfy.sh" target="_blank" rel="noopener">ntfy</a>, abonne-toi à un topic au nom difficile à deviner, et mets le même nom ici.</p>
+  <div class="inputContainer"><input is="emby-input" type="text" id="NtfyTopic" label="Topic ntfy (vide = désactivé)" placeholder="dlhelper-moon-xxxxx" /></div>
+  <div class="inputContainer"><input is="emby-input" type="url" id="NtfyServer" label="Serveur ntfy" /></div>
+  <div class="inputContainer">
+    <input is="emby-input" type="password" id="NtfyToken" label="Jeton d'accès ntfy (optionnel)" autocomplete="off" />
+    <div class="fieldDescription">Seulement si ton serveur ntfy demande une authentification.</div>
+  </div>
+  <div class="inputContainer">
+    <input is="emby-input" type="password" id="DiscordWebhookUrl" label="Webhook Discord (optionnel)" autocomplete="off" />
+    <div class="fieldDescription">Paramètres du salon → Intégrations → Webhooks → Copier l'URL.</div>
+  </div>
+  <button is="emby-button" type="button" class="raised button-alt dlhTestNotify"><span>🧪 Envoyer une notification de test</span></button>
+  <div class="dlh-msg dlhNotifyMsg"></div>
+
+  <h2 class="sectionTitle">🔍 Syncthing et détection</h2>
+  <p class="fieldDescription">dl-helper demande à Syncthing s'il reste des fichiers à recevoir avant de considérer un téléchargement comme terminé. Sans Syncthing, seule la stabilité des fichiers compte.</p>
+  <div class="inputContainer"><input is="emby-input" type="url" id="SyncthingUrl" label="API Syncthing (vide = sans Syncthing)" placeholder="http://127.0.0.1:8384" /></div>
+  <div class="inputContainer">
+    <input is="emby-input" type="password" id="SyncthingApiKey" label="Clé API Syncthing" autocomplete="off" />
+    <div class="fieldDescription">Interface Syncthing → Actions → Configuration → Général → Clé d'API.</div>
+  </div>
+  <div class="inputContainer">
+    <input is="emby-input" type="text" id="SyncthingFolderId" label="ID du dossier Syncthing" />
+  </div>
+  <button is="emby-button" type="button" class="raised button-alt dlhFindFolder"><span>🔎 Trouver le dossier</span></button>
+  <div class="dlh-msg dlhFolderMsg"></div>
+  <div class="dlh-folders"></div>
+  <div class="inputContainer">
+    <input is="emby-input" type="text" id="SyncthingConfig" label="config.xml de Syncthing (optionnel)" />
+    <div class="fieldDescription">Si Jellyfin peut le lire, la clé API et l'ID du dossier y sont pris quand les champs sont vides.</div>
+  </div>
+  <div class="inputContainer"><input is="emby-input" type="number" id="PollInterval" label="Intervalle entre deux vérifications (secondes)" min="5" /></div>
+  <div class="inputContainer"><input is="emby-input" type="number" id="StableSeconds" label="Temps sans changement avant « terminé » (secondes)" min="10" /></div>
+
+  <div style="margin-top:2em">
+    <button is="emby-button" type="submit" class="raised button-submit block"><span>Enregistrer</span></button>
+  </div>
+</form>
+</div>
+</div>
+
+<script type="text/javascript">
+(function () {
+    'use strict';
+    var pluginId = '252483f4-bd35-44be-ba5e-49e971a89efe';
+    var page = document.querySelector('#dlHelperConfigPage');
+    var TEXT = ['WatchDir', 'DestAnime', 'DestMusique', 'DestFilms', 'DestSeries', 'SyncthingUrl', 'SyncthingConfig',
+        'SyncthingApiKey', 'SyncthingFolderId', 'JellyfinPublicUrl', 'NtfyServer', 'NtfyTopic', 'NtfyToken', 'DiscordWebhookUrl', 'AutoAction'];
+    var NUM = ['PollInterval', 'StableSeconds', 'AutoDelayMinutes'];
+    var BOOL = ['UseHardlinks', 'RefreshLibraryAfterTransfer', 'NotifyPopup', 'NotifyActivityLog'];
+
+    function el(id) { return page.querySelector('#' + id); }
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+    function msg(cls, text, kind) {
+        var m = page.querySelector('.' + cls);
+        m.className = 'dlh-msg ' + cls + (kind ? ' ' + kind : '');
+        m.textContent = text || '';
+    }
+    function post(path, body) {
+        return fetch(ApiClient.getUrl('DlHelper/' + path), {
+            method: 'POST',
+            headers: { 'Authorization': 'MediaBrowser Token="' + ApiClient.accessToken() + '"', 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        }).then(function (r) {
+            if (r.status === 204) return null;
+            return r.json().catch(function () { return null; }).then(function (d) {
+                if (!r.ok) throw new Error((d && d.error) || ('Erreur ' + r.status));
+                return d;
+            });
+        });
+    }
+
+    function load() {
+        Dashboard.showLoadingMsg();
+        ApiClient.getPluginConfiguration(pluginId).then(function (c) {
+            TEXT.forEach(function (k) { el(k).value = c[k] == null ? '' : c[k]; });
+            NUM.forEach(function (k) { el(k).value = c[k]; });
+            BOOL.forEach(function (k) { el(k).checked = !!c[k]; });
+            Dashboard.hideLoadingMsg();
+        });
+        // Propose les dossiers des médiathèques comme destinations.
+        ApiClient.getVirtualFolders().then(function (libs) {
+            var paths = [];
+            (libs || []).forEach(function (l) { (l.Locations || []).forEach(function (p) { if (paths.indexOf(p) < 0) paths.push(p); }); });
+            el('dlhLibPaths').innerHTML = paths.map(function (p) { return '<option value="' + esc(p) + '">'; }).join('');
+        }).catch(function () { });
+    }
+
+    page.addEventListener('pageshow', load);
+    page.addEventListener('viewshow', load);
+
+    page.querySelector('.dlHelperConfigForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        Dashboard.showLoadingMsg();
+        ApiClient.getPluginConfiguration(pluginId).then(function (c) {
+            TEXT.forEach(function (k) { c[k] = el(k).value.trim(); });
+            NUM.forEach(function (k) { c[k] = Number(el(k).value); });
+            BOOL.forEach(function (k) { c[k] = el(k).checked; });
+            return ApiClient.updatePluginConfiguration(pluginId, c);
+        }).then(function (r) {
+            Dashboard.processPluginConfigurationUpdateResult(r);
+        });
+        return false;
+    });
+
+    page.querySelector('.dlhFindFolder').addEventListener('click', function () {
+        msg('dlhFolderMsg', 'Connexion à Syncthing…');
+        page.querySelector('.dlh-folders').innerHTML = '';
+        post('Syncthing/Folders', { Url: el('SyncthingUrl').value.trim(), ApiKey: el('SyncthingApiKey').value.trim() }).then(function (list) {
+            msg('dlhFolderMsg', list.length ? 'Clique sur le dossier qui correspond au dossier surveillé :' : 'Aucun dossier dans Syncthing.', 'ok');
+            page.querySelector('.dlh-folders').innerHTML = list.map(function (f) {
+                return '<button type="button" data-id="' + esc(f.id) + '"><b>' + esc(f.label || f.id) + '</b>' +
+                    '<small>' + esc(f.id) + ' · ' + esc(f.path) + (f.type === 'receiveonly' ? ' · réception seule' : '') + '</small></button>';
+            }).join('');
+        }).catch(function (err) { msg('dlhFolderMsg', '❌ ' + err.message, 'err'); });
+    });
+
+    page.querySelector('.dlh-folders').addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-id]');
+        if (!b) return;
+        el('SyncthingFolderId').value = b.dataset.id;
+        page.querySelector('.dlh-folders').innerHTML = '';
+        msg('dlhFolderMsg', '✅ Dossier sélectionné. Pense à enregistrer.', 'ok');
+    });
+
+    page.querySelector('.dlhTestNotify').addEventListener('click', function () {
+        if (!el('NtfyTopic').value.trim() && !el('DiscordWebhookUrl').value.trim()) {
+            msg('dlhNotifyMsg', 'Renseigne un topic ntfy ou un webhook Discord.', 'err');
+            return;
+        }
+        msg('dlhNotifyMsg', 'Envoi…');
+        post('Notify/Test', {
+            NtfyServer: el('NtfyServer').value.trim(), NtfyTopic: el('NtfyTopic').value.trim(),
+            NtfyToken: el('NtfyToken').value.trim(), DiscordWebhookUrl: el('DiscordWebhookUrl').value.trim()
+        }).then(function () { msg('dlhNotifyMsg', '✅ Notification envoyée. Vérifie ton téléphone.', 'ok'); })
+          .catch(function (err) { msg('dlhNotifyMsg', '❌ ' + err.message, 'err'); });
+    });
+})();
+</script>
+</div>

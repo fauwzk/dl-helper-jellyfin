@@ -1,0 +1,399 @@
+<div id="dlHelperPage" data-role="page" class="page type-interior pluginConfigurationPage dlh-page" data-require="emby-button,emby-input">
+<style>
+.dlh-page .dlh-wrap { max-width: 64em; margin: 0 auto; padding: 1em 1em 4em; }
+.dlh-page .dlh-head { display: flex; align-items: center; gap: .8em; flex-wrap: wrap; margin-bottom: .4em; }
+.dlh-page .dlh-head h2 { margin: 0; flex: 1; font-weight: 500; }
+.dlh-page .dlh-chips { display: flex; gap: .5em; flex-wrap: wrap; margin: .3em 0 1.4em; font-size: .9em; }
+.dlh-page .dlh-chip { padding: .3em .75em; border-radius: 1em; background: rgba(128,128,128,.16); white-space: nowrap; }
+.dlh-page .dlh-chip.bad { background: rgba(229,57,53,.22); }
+.dlh-page .dlh-section { margin-bottom: 2em; }
+.dlh-page .dlh-section > h3 { font-weight: 500; margin: 0 0 .7em; display: flex; align-items: center; gap: .5em; }
+.dlh-page .dlh-count { font-size: .75em; padding: .1em .55em; border-radius: 1em; background: rgba(128,128,128,.22); }
+.dlh-page .dlh-card { background: rgba(128,128,128,.1); border-radius: .6em; padding: 1em 1.1em; margin-bottom: .8em; }
+.dlh-page .dlh-card.err { box-shadow: inset 3px 0 0 #e53935; }
+.dlh-page .dlh-card.busy { opacity: .75; }
+.dlh-page .dlh-title { font-size: 1.05em; font-weight: 500; word-break: break-word; margin-bottom: .3em; }
+.dlh-page .dlh-meta { font-size: .85em; opacity: .75; display: flex; gap: 1em; flex-wrap: wrap; }
+.dlh-page .dlh-dests { display: flex; gap: .45em; flex-wrap: wrap; margin: .85em 0 .7em; }
+.dlh-page .dlh-dest { border: 1px solid rgba(128,128,128,.4); background: transparent; color: inherit; border-radius: 2em; padding: .35em .9em; cursor: pointer; font: inherit; font-size: .92em; }
+.dlh-page .dlh-dest:hover { background: rgba(128,128,128,.15); }
+.dlh-page .dlh-dest.on { background: #00a4dc; border-color: #00a4dc; color: #fff; }
+.dlh-page .dlh-dest small { opacity: .8; margin-left: .3em; }
+.dlh-page .dlh-actions { display: flex; gap: .5em; flex-wrap: wrap; align-items: center; }
+.dlh-page .dlh-actions .emby-button { margin: 0; }
+.dlh-page .dlh-btn-copy { background: #2e7d32 !important; color: #fff !important; }
+.dlh-page .dlh-btn-move { background: #00a4dc !important; color: #fff !important; }
+.dlh-page .dlh-note { font-size: .85em; margin-top: .6em; opacity: .85; }
+.dlh-page .dlh-note.err { color: #ef5350; opacity: 1; }
+.dlh-page .dlh-rename { display: flex; gap: .5em; margin-top: .7em; align-items: center; }
+.dlh-page .dlh-rename input { flex: 1; min-width: 0; }
+.dlh-page .dlh-row { display: flex; align-items: center; gap: .8em; padding: .55em .2em; border-bottom: 1px solid rgba(128,128,128,.15); }
+.dlh-page .dlh-row:last-child { border-bottom: 0; }
+.dlh-page .dlh-row .n { flex: 1; min-width: 0; word-break: break-word; }
+.dlh-page .dlh-row .s { font-size: .85em; opacity: .7; white-space: nowrap; }
+.dlh-page .dlh-row .t { font-size: .8em; opacity: .6; white-space: nowrap; }
+.dlh-page .dlh-empty { opacity: .6; padding: .4em .2em; }
+.dlh-page .dlh-problem { display: flex; gap: .8em; align-items: flex-start; background: rgba(255,152,0,.14); border-radius: .6em; padding: .8em 1em; margin-bottom: .6em; }
+.dlh-page .dlh-problem.muted { background: rgba(128,128,128,.1); opacity: .7; }
+.dlh-page .dlh-problem .m { flex: 1; white-space: pre-line; word-break: break-word; font-size: .92em; }
+.dlh-page .dlh-link { background: none; border: 0; color: #00a4dc; cursor: pointer; font: inherit; padding: 0; }
+.dlh-page .dlh-toast { position: fixed; left: 50%; bottom: 2em; transform: translateX(-50%); background: #323232; color: #fff; padding: .8em 1.3em; border-radius: .4em; z-index: 9999; box-shadow: 0 4px 16px rgba(0,0,0,.4); max-width: 90vw; }
+.dlh-page details > summary { cursor: pointer; list-style: none; }
+.dlh-page details > summary::-webkit-details-marker { display: none; }
+.dlh-page .dlh-bar { height: 4px; background: rgba(128,128,128,.25); border-radius: 2px; overflow: hidden; margin-top: .6em; }
+.dlh-page .dlh-bar > div { height: 100%; background: #00a4dc; }
+</style>
+
+<div data-role="content">
+<div class="content-primary dlh-wrap">
+
+  <div class="dlh-head">
+    <h2>📥 Téléchargements</h2>
+    <button is="emby-button" type="button" class="raised button-alt dlh-scan" title="Vérifier le dossier tout de suite"><span>🔄 Actualiser</span></button>
+    <a is="emby-linkbutton" class="raised button-alt" href="#/configurationpage?name=dlhelperconfig" title="Réglages"><span>⚙️</span></a>
+  </div>
+  <div class="dlh-chips"></div>
+
+  <div class="dlh-problems"></div>
+
+  <div class="dlh-section">
+    <h3>🆕 À ranger <span class="dlh-count dlh-n-pending">0</span></h3>
+    <div class="dlh-pending"></div>
+  </div>
+
+  <div class="dlh-section dlh-sec-active">
+    <h3>⏬ En cours <span class="dlh-count dlh-n-active">0</span></h3>
+    <div class="dlh-active"></div>
+  </div>
+
+  <div class="dlh-section">
+    <h3>🕘 Historique</h3>
+    <div class="dlh-history"></div>
+  </div>
+
+  <div class="dlh-section">
+    <details class="dlh-folder-details">
+      <summary><h3 style="display:inline-flex">📂 Tout le dossier <span class="dlh-count dlh-n-folder">…</span></h3></summary>
+      <p class="dlh-note">Les éléments déjà présents au premier lancement sont ignorés. Tu peux en ranger un ici.</p>
+      <div class="dlh-folder"></div>
+    </details>
+  </div>
+
+</div>
+</div>
+
+<script type="text/javascript">
+(function () {
+    'use strict';
+    var page = document.querySelector('#dlHelperPage');
+    var timer = null;
+    var last = null;
+    var renameOpen = {};
+    var busyIds = {};
+
+    var EMOJI = { ANIME: '🎌', MUSIQUE: '🎵', FILMS: '🎬', SERIES: '📺' };
+    var LABEL = { ANIME: 'Anime', MUSIQUE: 'Musique', FILMS: 'Films', SERIES: 'Séries' };
+
+    function $(sel) { return page.querySelector(sel); }
+    function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+    function size(n) {
+        if (n == null || n < 0) return '…';
+        var u = ['o', 'Ko', 'Mo', 'Go', 'To'];
+        for (var i = 0; i < u.length; i++) {
+            if (n < 1024) return i === 0 ? n + ' o' : n.toFixed(1).replace('.', ',') + ' ' + u[i];
+            n /= 1024;
+        }
+        return n.toFixed(1) + ' Po';
+    }
+    function ago(iso) {
+        if (!iso) return '—';
+        var s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+        if (s < 60) return 'à l\'instant';
+        if (s < 3600) return 'il y a ' + Math.round(s / 60) + ' min';
+        if (s < 86400) return 'il y a ' + Math.round(s / 3600) + ' h';
+        return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    }
+    function inTime(iso) {
+        var s = Math.round((new Date(iso).getTime() - Date.now()) / 1000);
+        if (s <= 0) return 'imminent';
+        if (s < 3600) return 'dans ' + Math.ceil(s / 60) + ' min';
+        return 'dans ' + Math.floor(s / 3600) + ' h ' + Math.round((s % 3600) / 60) + ' min';
+    }
+    function files(n) { return n > 1 ? n + ' fichiers' : '1 fichier'; }
+
+    function toast(msg) {
+        var t = document.createElement('div');
+        t.className = 'dlh-toast';
+        t.textContent = msg;
+        page.appendChild(t);
+        setTimeout(function () { t.remove(); }, 3500);
+    }
+
+    function api(method, path, body) {
+        var opts = {
+            method: method,
+            headers: { 'Authorization': 'MediaBrowser Token="' + ApiClient.accessToken() + '"' }
+        };
+        if (body !== undefined) {
+            opts.headers['Content-Type'] = 'application/json';
+            opts.body = JSON.stringify(body);
+        }
+        return fetch(ApiClient.getUrl('DlHelper/' + path), opts).then(function (r) {
+            if (r.status === 204) return null;
+            return r.json().catch(function () { return null; }).then(function (data) {
+                if (!r.ok) throw new Error((data && data.error) || ('Erreur ' + r.status));
+                return data;
+            });
+        });
+    }
+
+    // ------------------------------------------------------------------ rendu
+
+    function chips(s) {
+        var c = [];
+        if (!s.syncthingEnabled) c.push('<span class="dlh-chip">Syncthing : non configuré</span>');
+        else if (!s.syncthingOk) c.push('<span class="dlh-chip bad">Syncthing : injoignable</span>');
+        else c.push('<span class="dlh-chip">Syncthing : ' + esc(s.syncthingState) +
+            (s.syncthingNeedFiles ? ' · ' + s.syncthingNeedFiles + ' fichier(s) à recevoir (' + size(s.syncthingNeedBytes) + ')' : '') + '</span>');
+        var badDest = s.destinations.filter(function (d) { return !d.ok; });
+        c.push('<span class="dlh-chip' + (badDest.length ? ' bad' : '') + '">Destinations : ' +
+            (badDest.length ? badDest.map(function (d) { return '❌ ' + esc(d.label); }).join(', ') : '✅') + '</span>');
+        c.push('<span class="dlh-chip">Mode auto : ' + (s.autoAction === 'copy' || s.autoAction === 'move'
+            ? (s.autoAction === 'copy' ? 'copier' : 'déplacer') + ' après ' + s.autoDelayMinutes + ' min' : 'désactivé') + '</span>');
+        c.push('<span class="dlh-chip">Dernier scan : ' + ago(s.lastScan) + '</span>');
+        $('.dlh-chips').innerHTML = c.join('');
+    }
+
+    function problems(s) {
+        $('.dlh-problems').innerHTML = s.problems.map(function (p) {
+            return '<div class="dlh-problem' + (p.muted ? ' muted' : '') + '">' +
+                '<span>' + (p.muted ? '🔕' : '⚠️') + '</span>' +
+                '<div class="m"><b>' + esc(p.key) + '</b> — ' + esc(p.message) + '</div>' +
+                '<button class="dlh-link" data-mute="' + esc(p.key) + '" data-on="' + (p.muted ? '0' : '1') + '">' +
+                (p.muted ? '🔔 Réactiver' : '🔕 Ignorer') + '</button></div>';
+        }).join('');
+    }
+
+    function pendingCard(it, s) {
+        var dest = it.chosenDest;
+        var busy = busyIds[it.id];
+        var h = '<div class="dlh-card' + (it.lastError ? ' err' : '') + (busy ? ' busy' : '') + '" data-id="' + it.id + '">';
+        h += '<div class="dlh-title">' + (it.isDir ? '📁' : '📄') + ' ' + esc(it.name) + '</div>';
+        h += '<div class="dlh-meta"><span>📦 ' + size(it.size) + '</span><span>🗂️ ' + files(it.count) + '</span>' +
+            '<span>🕘 ' + ago(it.notifiedAt) + '</span></div>';
+        if (it.rename) h += '<div class="dlh-note">✏️ Sera rangé sous le nom <b>' + esc(it.rename) + '</b></div>';
+
+        h += '<div class="dlh-dests">' + s.destinations.map(function (d) {
+            return '<button type="button" class="dlh-dest' + (d.key === dest ? ' on' : '') + '" data-dest="' + d.key + '" title="' + esc(d.path) + '">' +
+                d.emoji + ' ' + esc(d.label) + (d.key === it.suggest && !it.dest ? '<small>suggéré</small>' : '') + '</button>';
+        }).join('') + '</div>';
+
+        var dis = (!dest || busy) ? ' disabled' : '';
+        h += '<div class="dlh-actions">' +
+            '<button is="emby-button" type="button" class="raised dlh-btn-copy" data-act="copy"' + dis + '><span>📋 Copier</span></button>' +
+            '<button is="emby-button" type="button" class="raised dlh-btn-move" data-act="move"' + dis + '><span>✂️ Déplacer</span></button>' +
+            '<button is="emby-button" type="button" class="raised button-alt" data-act="rename"' + (busy ? ' disabled' : '') + '><span>✏️ Renommer</span></button>' +
+            '<button is="emby-button" type="button" class="raised button-alt" data-act="ignore"' + (busy ? ' disabled' : '') + '><span>🚫 Ignorer</span></button>' +
+            '</div>';
+
+        if (renameOpen[it.id]) {
+            h += '<div class="dlh-rename"><input is="emby-input" type="text" class="dlh-rename-input" value="' + esc(it.rename || it.name) + '" placeholder="Nom final (vide = nom d\'origine)">' +
+                '<button is="emby-button" type="button" class="raised button-submit" data-act="rename-ok"><span>OK</span></button></div>';
+        }
+        if (it.lastError) h += '<div class="dlh-note err">❌ ' + esc(it.lastError) + ' — réessaie ou choisis un autre dossier.</div>';
+        else if (!dest) h += '<div class="dlh-note">Ni vidéo ni audio détecté : choisis une destination.</div>';
+        else if (it.autoActionAt) h += '<div class="dlh-note">⏱️ Sinon : ' + (s.autoAction === 'copy' ? 'copie' : 'déplacement') +
+            ' automatique vers ' + LABEL[dest] + ' ' + inTime(it.autoActionAt) + '</div>';
+        return h + '</div>';
+    }
+
+    function activeRows(s) {
+        var rows = [];
+        s.items.filter(function (i) { return i.status === 'processing'; }).forEach(function (it) {
+            rows.push('<div class="dlh-row"><span>⏳</span><span class="n">' + esc(it.name) + '</span><span class="s">rangement vers ' +
+                esc(LABEL[it.chosenDest] || it.chosenDest) + '…</span></div>');
+        });
+        s.items.filter(function (i) { return i.status === 'downloading'; }).forEach(function (it) {
+            var detail = it.receivingFiles
+                ? 'reçoit encore ' + files(it.receivingFiles) + ' (' + size(it.receivingBytes) + ')'
+                : 'vérification de la fin du téléchargement…';
+            var pct = (it.receivingBytes && it.size > 0) ? Math.max(2, Math.min(99, 100 * it.size / (it.size + it.receivingBytes))) : null;
+            rows.push('<div class="dlh-row" style="flex-wrap:wrap"><span>⏬</span><span class="n">' + esc(it.name) + '</span><span class="s">' +
+                size(it.size) + ' · ' + detail + '</span>' +
+                (pct ? '<div class="dlh-bar" style="flex-basis:100%"><div style="width:' + pct.toFixed(0) + '%"></div></div>' : '') + '</div>');
+        });
+        s.receiving.forEach(function (r) {
+            rows.push('<div class="dlh-row"><span>⏬</span><span class="n">' + esc(r.name) + '</span><span class="s">' +
+                files(r.files) + ' à recevoir (' + size(r.bytes) + ')</span></div>');
+        });
+        return rows;
+    }
+
+    var KIND = { copy: '📋', move: '✂️', ignore: '🚫', error: '❌', info: 'ℹ️' };
+    function historyRows(s) {
+        if (!s.history.length) return '<div class="dlh-empty">Rien pour l\'instant.</div>';
+        return s.history.slice(0, 15).map(function (h) {
+            var what = h.message + (h.dest && h.kind !== 'error' ? ' → ' + EMOJI[h.dest] + ' ' + LABEL[h.dest] : '');
+            return '<div class="dlh-row"><span>' + (KIND[h.kind] || '•') + '</span><span class="n">' + esc(h.name) +
+                '<div class="s" style="white-space:normal">' + esc(what) + (h.who ? ' · ' + esc(h.who === 'auto' ? 'automatique' : h.who) : '') + '</div></span>' +
+                '<span class="t">' + ago(h.time) + '</span></div>';
+        }).join('') + (s.history.length ? '<div style="text-align:right;margin-top:.4em"><button class="dlh-link dlh-clear">Effacer l\'historique</button></div>' : '');
+    }
+
+    function render(s) {
+        last = s;
+        chips(s);
+        problems(s);
+        var pending = s.items.filter(function (i) { return i.status === 'pending'; })
+            .sort(function (a, b) { return new Date(b.notifiedAt) - new Date(a.notifiedAt); });
+        $('.dlh-n-pending').textContent = pending.length;
+        $('.dlh-pending').innerHTML = pending.length
+            ? pending.map(function (it) { return pendingCard(it, s); }).join('')
+            : '<div class="dlh-empty">✨ Rien à ranger. Les nouveaux téléchargements terminés apparaîtront ici.</div>';
+        var act = activeRows(s);
+        $('.dlh-n-active').textContent = act.length;
+        $('.dlh-active').innerHTML = act.length ? act.join('') : '<div class="dlh-empty">Aucun téléchargement en cours.</div>';
+        $('.dlh-history').innerHTML = historyRows(s);
+    }
+
+    function refresh(force) {
+        // Ne pas effacer ce que l'utilisateur est en train de taper.
+        var a = document.activeElement;
+        if (!force && a && page.contains(a) && a.tagName === 'INPUT') return Promise.resolve();
+        return api('GET', 'Status').then(render).catch(function (e) {
+            $('.dlh-chips').innerHTML = '<span class="dlh-chip bad">❌ ' + esc(e.message) + '</span>';
+        });
+    }
+
+    function loadFolder() {
+        $('.dlh-folder').innerHTML = '<div class="dlh-empty">Calcul des tailles…</div>';
+        api('GET', 'Folder').then(function (list) {
+            $('.dlh-n-folder').textContent = list.length;
+            var icon = { baseline: '▫️', downloading: '⏬', pending: '🆕', processing: '⏳', done: '✅', ignored: '🚫' };
+            var tip = { baseline: 'déjà présent', downloading: 'en réception', pending: 'à ranger', processing: 'en cours', done: 'copié', ignored: 'ignoré' };
+            $('.dlh-folder').innerHTML = list.length ? list.map(function (e) {
+                var canRestore = e.status === 'baseline' || e.status === 'ignored' || e.status === 'done';
+                return '<div class="dlh-row"><span title="' + tip[e.status] + '">' + (icon[e.status] || '▫️') + '</span>' +
+                    '<span class="n">' + (e.isDir ? '📁 ' : '📄 ') + esc(e.name) + '</span>' +
+                    '<span class="s">' + size(e.size) + ' · ' + files(e.count) + '</span>' +
+                    (canRestore ? '<button class="dlh-link" data-restore="' + e.id + '">Ranger</button>' : '<span class="t">' + tip[e.status] + '</span>') +
+                    '</div>';
+            }).join('') : '<div class="dlh-empty">Le dossier est vide.</div>';
+        }).catch(function (e) {
+            $('.dlh-folder').innerHTML = '<div class="dlh-note err">❌ ' + esc(e.message) + '</div>';
+        });
+    }
+
+    // ------------------------------------------------------------------ actions
+
+    function itemById(id) {
+        return last && last.items.filter(function (i) { return i.id === id; })[0];
+    }
+
+    page.addEventListener('click', function (ev) {
+        var t = ev.target.closest('button, a');
+        if (!t || !page.contains(t)) return;
+
+        if (t.classList.contains('dlh-scan')) {
+            api('POST', 'Scan').then(function () { toast('🔄 Vérification lancée'); setTimeout(refresh, 1500); });
+            return;
+        }
+        if (t.classList.contains('dlh-clear')) {
+            api('DELETE', 'History').then(function () { refresh(true); });
+            return;
+        }
+        if (t.dataset.mute) {
+            api('POST', 'Problems/Mute', { Key: t.dataset.mute, Mute: t.dataset.on === '1' })
+                .then(function () { refresh(true); }).catch(function (e) { toast('❌ ' + e.message); });
+            return;
+        }
+        if (t.dataset.restore) {
+            api('POST', 'Items/' + t.dataset.restore + '/Restore').then(function () {
+                toast('🆕 Ajouté à « À ranger »');
+                loadFolder();
+                refresh(true);
+            }).catch(function (e) { toast('❌ ' + e.message); });
+            return;
+        }
+
+        var card = t.closest('.dlh-card');
+        if (!card) return;
+        var id = card.dataset.id;
+        var it = itemById(id);
+
+        if (t.dataset.dest) {
+            var newDest = t.dataset.dest;
+            if (it) { it.dest = newDest; it.chosenDest = newDest; render(last); }
+            api('POST', 'Items/' + id + '/Select', { Destination: newDest }).catch(function (e) { toast('❌ ' + e.message); refresh(true); });
+            return;
+        }
+
+        var act = t.dataset.act;
+        if (act === 'rename') {
+            renameOpen[id] = !renameOpen[id];
+            render(last);
+            var input = page.querySelector('.dlh-card[data-id="' + id + '"] .dlh-rename-input');
+            if (input) { input.focus(); input.select(); }
+            return;
+        }
+        if (act === 'rename-ok') {
+            submitRename(card, id);
+            return;
+        }
+        if (act === 'copy' || act === 'move' || act === 'ignore') {
+            busyIds[id] = true;
+            render(last);
+            api('POST', 'Items/' + id + '/Action', { Action: act }).then(function () {
+                var dest = LABEL[it && it.chosenDest];
+                toast({ copy: '📋 Copie vers ' + dest + ' lancée', move: '✂️ Déplacement vers ' + dest + ' lancé', ignore: '🚫 Ignoré' }[act]);
+                setTimeout(function () { delete busyIds[id]; refresh(true); }, 800);
+            }).catch(function (e) {
+                delete busyIds[id];
+                toast('❌ ' + e.message);
+                refresh(true);
+            });
+        }
+    });
+
+    function submitRename(card, id) {
+        var input = card.querySelector('.dlh-rename-input');
+        api('POST', 'Items/' + id + '/Select', { Rename: input ? input.value : '' }).then(function () {
+            renameOpen[id] = false;
+            input && input.blur();
+            refresh(true);
+        }).catch(function (e) { toast('❌ ' + e.message); });
+    }
+
+    page.addEventListener('keydown', function (ev) {
+        if (!ev.target.classList || !ev.target.classList.contains('dlh-rename-input')) return;
+        var card = ev.target.closest('.dlh-card');
+        if (ev.key === 'Enter') { ev.preventDefault(); submitRename(card, card.dataset.id); }
+        if (ev.key === 'Escape') { renameOpen[card.dataset.id] = false; ev.target.blur(); render(last); }
+    });
+
+    $('.dlh-folder-details').addEventListener('toggle', function (ev) {
+        if (ev.target.open) loadFolder();
+    });
+
+    function start() {
+        refresh(true);
+        clearInterval(timer);
+        timer = setInterval(refresh, 5000);
+    }
+    function stop() {
+        clearInterval(timer);
+        timer = null;
+    }
+    // Selon la version de l'interface web, les pages d'extension reçoivent viewshow et/ou pageshow.
+    page.addEventListener('viewshow', start);
+    page.addEventListener('pageshow', start);
+    page.addEventListener('viewhide', stop);
+    page.addEventListener('pagehide', stop);
+    if (page.isConnected && !page.classList.contains('hide')) start();
+})();
+</script>
+</div>
